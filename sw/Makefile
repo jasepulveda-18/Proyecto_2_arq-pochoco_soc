@@ -24,6 +24,11 @@ SRCS  = $(wildcard *.s)
 HEXS  = $(SRCS:.s=.hex)
 PROGS = $(basename $(SRCS))
 
+# El proyecto final debe usar el assembler desarrollado por el grupo.
+# Esta regla especifica que game.hex se genera con assembler.py.
+game.hex: game.s assembler.py
+	python3 assembler.py game.s game.hex
+
 all: $(HEXS)
 
 .PHONY: $(PROGS)
@@ -39,4 +44,7 @@ $(PROGS): %: %.hex
 clean:
 	rm -f *.o *.elf *.bin
 
-.PHONY: all clean
+test: game.hex
+	python3 -m unittest -v test_assembler.py
+
+.PHONY: all clean test

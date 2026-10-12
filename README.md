@@ -8,6 +8,37 @@ Welcome to the repository! This project contains the RTL for a custom 32-bit pro
 
 This is meant to be forked, not just cloned. You'll be poking around the RTL, so make it your own, we won't judge (we might even be a little proud).
 
+## Proyecto 2: juego de reflejos
+
+Este fork agrega un juego de reflejos para la Go Board. Al arrancar, los
+displays muestran `88` para indicar que el programa esta listo; la partida se
+inicia presionando y soltando cualquier boton. Cada ronda enciende los cuatro LEDs
+durante tres segundos, selecciona un LED objetivo, mide la respuesta en decimas
+de segundo y conserva diez tiempos correctos. Un boton incorrecto muestra `EE`
+y reinicia solamente la ronda actual. El tiempo del decimo acierto permanece
+visible hasta presionar y soltar cualquier boton; entonces se muestra el
+promedio.
+
+El flujo del software es:
+
+```text
+sw/game.s -> sw/assembler.py -> sw/game.hex -> memoria de Pochoco -> Espino Core
+```
+
+`game.hex` se genera con el assembler desarrollado para el proyecto; no depende
+de un assembler RISC-V externo.
+
+Desde la raiz del repositorio:
+
+```bash
+make game       # regenera sw/game.hex desde sw/game.s
+make test       # ejecuta las pruebas del assembler
+make all        # sintetiza, genera el bitstream y programa la Go Board
+```
+
+`make all` requiere la Go Board conectada. El top-level sintetizado es
+`rtl/game_top.v`, que selecciona `sw/game.hex` como imagen de memoria.
+
 ## Repository Structure
 
 The hardware is written in Verilog and divided into these main categories:
@@ -25,6 +56,7 @@ The SoC routes memory and data requests using a hardcoded address decoding schem
   * `Offset 0x00`: 7-Segment Displays
   * `Offset 0x04`: LEDs
   * `Offset 0x08`: Button Inputs
+  * `Offset 0x0C`: Free-running 32-bit cycle counter
 * **`0x8001_0000` - SPI Slave**: Custom SPI interface routing.
   * `Offset 0x00`: SPI Status (Chip Select state, New Data flag)
   * `Offset 0x04`: Received "Price" byte (from external master)
@@ -55,6 +87,6 @@ make blink                        # assembles blink.s -> blink.hex
 make PREFIX=riscv64-elf- blink    # if your toolchain uses a different prefix
 ```
 
-Drop a new `<name>.s` file in `sw/` and `make <name>` picks it up automatically, no `Makefile` changes needed. Don't forget to change the MemFile in pochoco_soc.v.
+Drop a new `<name>.s` file in `sw/` and `make <name>` picks it up automatically, no `Makefile` changes needed. The Project 2 game is selected by `rtl/game_top.v`.
 
 **CATCH:** The core implements [RV32E](https://docs.riscv.org/reference/isa/v20260120/unpriv/rv32.html), with one thing worth knowing: shift instructions (`SLL`/`SRL`/`SRA`/`SLLI`/`SRLI`/`SRAI`) are decoded correctly but disabled in the ALU to save LUTs on the target FPGA, so they currently execute as `ADD` instead. Avoid shifts in your assembly, or design your own shifter...

@@ -9,8 +9,9 @@
 # - Nicolás Villegas <navillegas@miuandes.cl>
 
 # Configuration
-TOP  := pochoco_soc
+TOP  ?= game_top
 PCF  := goboard.pcf
+GAME_HEX := sw/game.hex
 
 # RTL Sources
 SRC  := $(wildcard ./rtl/*.v ./rtl/**/*.v)
@@ -20,18 +21,26 @@ JSON := $(TOP).json
 ASC  := $(TOP).asc
 BIN  := $(TOP).bin
 
-.PHONY: all prog clean stats
+.PHONY: all prog clean stats game test
 
 # Default target
 all: prog
 
 # Step 1: Synthesis using Yosys
-$(JSON): $(SRC)
+$(JSON): $(SRC) $(GAME_HEX)
 	yosys -p "read_verilog $(SRC); synth_ice40 -top $(TOP) -json ${TOP}.json; stat"
+
+$(GAME_HEX): sw/game.s sw/assembler.py
+	$(MAKE) -C sw game.hex
+
+game: $(GAME_HEX)
+
+test:
+	$(MAKE) -C sw test
 
 # Step 2: Place and Route using NextPNR
 $(ASC): $(JSON) $(PCF)
-	nextpnr-ice40 --hx1k --package vq100 --json $(JSON) --pcf $(PCF) --asc $(ASC)
+	nextpnr-ice40 --hx1k --package vq100 --freq 25 --json $(JSON) --pcf $(PCF) --asc $(ASC)
 
 # Step 3: Bitstream Generation
 $(BIN): $(ASC)

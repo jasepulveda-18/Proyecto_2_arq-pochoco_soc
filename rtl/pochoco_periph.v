@@ -26,9 +26,17 @@ module pochoco_periph (
   wire [5:0] off    = addr_i[7:2];
   wire       access = sel_i & req_i;
 
-  // LEDs and raw digit registers
+  // LEDs, raw digit registers and free-running cycle counter
   reg [3:0]  led_q;
   reg [7:0]  digit_q;
+  reg [31:0] cycle_q;
+
+  // The Go Board clock is 25 MHz, so this counter advances
+  // 25,000,000 times per second and wraps naturally at 32 bits.
+  always @(posedge clk_i or negedge rst_ni) begin
+    if (!rst_ni) cycle_q <= 32'b0;
+    else         cycle_q <= cycle_q + 32'd1;
+  end
   
   always @(posedge clk_i or negedge rst_ni) begin
     if (!rst_ni) begin
@@ -80,6 +88,7 @@ module pochoco_periph (
     else if (access & ~we_i) begin
       case (off)
         6'd2: rdata_o <= {28'b0, btn_i}; // Buttons
+        6'd3: rdata_o <= cycle_q;         // Cycle counter at offset 0x0C
         default: rdata_o <= 32'b0;
       endcase
     end
